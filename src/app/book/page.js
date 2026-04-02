@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CalendarDays, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -11,7 +11,7 @@ const TIME_SLOTS = [
   '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM',
 ];
 
-export default function BookAppointment() {
+function BookAppointmentContent() {
   const router = useRouter();
   const params = useSearchParams();
   const doctorId = params.get('doctorId');
@@ -128,5 +128,13 @@ export default function BookAppointment() {
         </form>
       </motion.div>
     </div>
+  );
+}
+
+export default function BookAppointment() {
+  return (
+    <Suspense fallback={<div style={{ textAlign: 'center', padding: '4rem', color: 'var(--text-muted)' }}>Loading booking data...</div>}>
+      <BookAppointmentContent />
+    </Suspense>
   );
 }
