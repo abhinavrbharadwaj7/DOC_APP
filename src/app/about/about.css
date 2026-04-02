@@ -1,0 +1,126 @@
+/* src/app/about/about.css */
+.about-container {
+  min-height: 100vh;
+  padding-top: 10rem;
+  padding-bottom: 6rem;
+  background: var(--background);
+}
+
+.about-hero {
+  display: flex;
+  align-items: center;
+  gap: 5rem;
+  margin-bottom: 8rem;
+}
+
+.about-text-content {
+  flex: 1;
+}
+
+.about-title {
+  font-size: clamp(3.2rem, 6vw, 5.5rem);
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: var(--primary-dark);
+  line-height: 1.05;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 2rem;
+}
+
+.about-title > div {
+  font-size: inherit;
+  color: inherit;
+}
+
+.about-desc {
+  font-size: 1.25rem;
+  line-height: 1.8;
+  color: var(--text-muted);
+  max-width: 500px;
+}
+
+.about-image-wrapper {
+  flex: 1.2;
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 16/10;
+  box-shadow: 0 40px 80px -20px rgba(10, 102, 194, 0.2);
+}
+
+.about-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 10s ease;
+}
+
+.about-image-wrapper:hover .about-img {
+  transform: scale(1.05);
+}
+
+.image-overlay {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(to top right, rgba(10, 102, 194, 0.1), transparent);
+  pointer-events: none;
+}
+
+.milestone-ticker {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4rem;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+}
+
+.milestone {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.milestone h3 {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  color: var(--primary);
+  line-height: 1;
+}
+
+.milestone span {
+  font-size: 1rem;
+  color: var(--text-muted);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.divider {
+  width: 1px;
+  height: 60px;
+  background: var(--border-color);
+}
+
+@media (max-width: 1024px) {
+  .about-hero {
+    flex-direction: column;
+    text-align: center;
+  }
+  .about-title {
+    align-items: center;
+  }
+  .about-desc {
+    margin: 0 auto;
+  }
+  .milestone-ticker {
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: center;
+  }
+  .divider { display: none; }
+  .milestone { text-align: center; width: 40%; }
+}
