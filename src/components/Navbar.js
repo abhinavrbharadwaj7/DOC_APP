@@ -7,8 +7,12 @@ import './Navbar.css';
 export default function Navbar() {
   const pathname = usePathname();
 
-  // Hide the marketing navbar inside the Admin portal as it has a dedicated full-screen layout
-  if (pathname && pathname.startsWith('/admin')) {
+  // Hide the marketing navbar inside all portal dashboards
+  if (pathname && (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/doctor/dashboard') ||
+    pathname.startsWith('/dashboard')
+  )) {
     return null;
   }
 
