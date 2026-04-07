@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, FileText, LogOut, Clock, User } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { CalendarDays, FileText, LogOut, Clock, User, QrCode, X } from 'lucide-react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import Link from 'next/link';
+import QRCode from 'react-qr-code';
 import '../admin/dashboard/admin.css';
 import './dashboard.css';
+import './ticket.css';
 
 export default function PatientDashboard() {
   const router = useRouter();
@@ -13,6 +15,26 @@ export default function PatientDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appointments');
+  const [selectedTicket, setSelectedTicket] = useState(null);
+
+  // 3D Tilt Effect variables
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateX = useTransform(mouseY, [-0.5, 0.5], ['15deg', '-15deg']);
+  const rotateY = useTransform(mouseX, [-0.5, 0.5], ['-15deg', '15deg']);
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
+  };
+
+  const handleMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('doccare_user');
@@ -80,7 +102,7 @@ export default function PatientDashboard() {
                 </div>
               ) : (
                 <table className="admin-table">
-                  <thead><tr><th>Date</th><th>Time Slot</th><th>Doctor</th><th>Reason</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Time Slot</th><th>Doctor</th><th>Reason</th><th>Status</th><th>Ticket</th></tr></thead>
                   <tbody>
                     {appointments.map(apt => (
                       <tr key={apt._id}>
@@ -89,6 +111,17 @@ export default function PatientDashboard() {
                         <td>{apt.doctorId?.name || 'N/A'}</td>
                         <td>{apt.reason}</td>
                         <td><span className={`status-badge ${statusClass(apt.status)}`}>{apt.status}</span></td>
+                        <td>
+                          {apt.entryToken && (
+                            <button 
+                              className="btn-primary" 
+                              style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
+                              onClick={() => setSelectedTicket(apt)}
+                            >
+                              <QrCode size={14} style={{ marginRight: 4 }} /> View
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -126,6 +159,72 @@ export default function PatientDashboard() {
           </motion.div>
         )}
       </main>
+
+      <AnimatePresence>
+        {selectedTicket && (
+          <motion.div 
+            className="ticket-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedTicket(null)}
+          >
+            <div className="ticket-3d-wrapper">
+              <motion.div 
+                className="ticket-card"
+                style={{ rotateX, rotateY }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
+                initial={{ scale: 0.8, y: 50, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.8, y: 50, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button className="close-ticket-btn" onClick={() => setSelectedTicket(null)}>
+                  <X size={16} />
+                </button>
+
+                <div className="ticket-header">
+                  <h4>Entry Pass</h4>
+                  <p>Admit One</p>
+                </div>
+
+                <div className="qr-container">
+                  <QRCode 
+                    value={selectedTicket.entryToken} 
+                    size={160}
+                    fgColor="#0f172a"
+                    bgColor="#ffffff"
+                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                  />
+                </div>
+
+                <div className="ticket-details">
+                  <div className="ticket-detail-row">
+                    <span className="ticket-detail-label">Patient</span>
+                    <span className="ticket-detail-val">{user?.name}</span>
+                  </div>
+                  <div className="ticket-detail-row">
+                    <span className="ticket-detail-label">Date</span>
+                    <span className="ticket-detail-val">{new Date(selectedTicket.date).toLocaleDateString()}</span>
+                  </div>
+                  <div className="ticket-detail-row">
+                    <span className="ticket-detail-label">Time</span>
+                    <span className="ticket-detail-val">{selectedTicket.slot.split(' - ')[0]}</span>
+                  </div>
+                  <div className="ticket-detail-row" style={{ marginTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                    <span className="ticket-detail-label">Status</span>
+                    <span className={`ticket-status ${selectedTicket.isPresent ? 'scanned' : 'pending'}`}>
+                      {selectedTicket.isPresent ? 'Scanned' : 'Pending Entry'}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

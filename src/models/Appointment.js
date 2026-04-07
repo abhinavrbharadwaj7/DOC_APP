@@ -9,7 +9,9 @@ const appointmentSchema = new mongoose.Schema({
   reason: { type: String, required: true },
   notes: { type: String },
   prescriptionUrl: { type: String },
-  reportUrl: { type: String }
+  reportUrl: { type: String },
+  entryToken: { type: String },
+  isPresent: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.models.Appointment || mongoose.model('Appointment', appointmentSchema);

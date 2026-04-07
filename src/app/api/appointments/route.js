@@ -1,5 +1,6 @@
 import connectToDatabase from '../../../lib/db';
 import Appointment from '../../../models/Appointment';
+import crypto from 'crypto';
 
 export async function POST(req) {
   try {
@@ -17,6 +18,8 @@ export async function POST(req) {
       return Response.json({ error: 'This slot is already booked. Please choose another.' }, { status: 409 });
     }
 
+    const entryToken = crypto.randomUUID();
+
     const appointment = await Appointment.create({
       patientId,
       doctorId,
@@ -24,6 +27,8 @@ export async function POST(req) {
       slot,
       reason,
       status: 'pending',
+      entryToken,
+      isPresent: false
     });
 
     return Response.json({ message: 'Appointment booked!', appointment }, { status: 201 });

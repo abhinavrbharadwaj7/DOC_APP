@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Users, Calendar as CalendarIcon, FileStack, Settings, Search, Plus, Activity, LogOut } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, FileStack, Settings, Search, Plus, Activity, LogOut, ScanLine, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { BlurText } from '../../../components/ReactBits/BlurText';
 import { Magnetic } from '../../../components/ReactBits/Magnetic';
+import QRScanner from '../../../components/QRScanner';
 import './admin.css';
 
 export default function AdminDashboard() {
@@ -14,6 +15,35 @@ export default function AdminDashboard() {
   const [appointments, setAppointments] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState(null);
+  const [resumeScanner, setResumeScanner] = useState(null);
+
+  const handleScanSuccess = async (decodedText, decodedResult, resumeScan) => {
+    setResumeScanner(() => resumeScan);
+    try {
+      const res = await fetch('/api/admin/verify-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: decodedText })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setScanResult(data);
+        setScanError(null);
+      } else {
+        setScanResult(null);
+        setScanError(data.error || 'Invalid Ticket');
+      }
+    } catch (err) {
+      setScanResult(null);
+      setScanError('Failed to verify ticket.');
+    }
+  };
+
+  const handleScanError = () => {
+    // silently ignore ongoing scan failures
+  };
 
   useEffect(() => {
     const saved = localStorage.getItem('doccare_user');
@@ -43,6 +73,7 @@ export default function AdminDashboard() {
         </div>
         <nav className="admin-nav">
           <button onClick={() => setActiveTab('schedule')} className={`nav-item ${activeTab === 'schedule' ? 'active' : ''}`}><CalendarIcon size={20} /> Master Schedule</button>
+          <button onClick={() => setActiveTab('scanner')} className={`nav-item ${activeTab === 'scanner' ? 'active' : ''}`}><ScanLine size={20} /> Check-in Scanner</button>
           <button onClick={() => setActiveTab('directory')} className={`nav-item ${activeTab === 'directory' ? 'active' : ''}`}><Users size={20} /> Directory</button>
           <button onClick={() => setActiveTab('records')} className={`nav-item ${activeTab === 'records' ? 'active' : ''}`}><FileStack size={20} /> Records Vault</button>
           <button onClick={() => setActiveTab('settings')} className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`}><Settings size={20} /> System Settings</button>
@@ -181,6 +212,52 @@ export default function AdminDashboard() {
                       <span className={`status-badge ${s.cls}`} style={{ padding: '0.6rem 1.2rem' }}>{s.status}</span>
                     </div>
                   ))}
+                </div>
+              </section>
+            </motion.div>
+          )}
+
+          {activeTab === 'scanner' && (
+            <motion.div key="scanner" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <section className="admin-section">
+                <div className="section-header"><h3><BlurText text="Ticket Verification Scanner" delay={0.1} /></h3></div>
+                <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
+                  <div style={{ flex: 1 }}>
+                    {(!scanResult && !scanError) ? (
+                      <QRScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
+                    ) : (
+                      <div style={{ textAlign: 'center', padding: '2rem', background: scanResult ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '15px', border: `1px solid ${scanResult ? '#10b981' : '#ef4444'}` }}>
+                        {scanResult ? (
+                          <>
+                            <CheckCircle size={64} color="#10b981" style={{ margin: '0 auto 1rem' }} />
+                            <h2 style={{ color: '#10b981', marginBottom: '1rem' }}>Ticket Verified!</h2>
+                            <div style={{ background: 'white', padding: '1.5rem', borderRadius: '10px', textAlign: 'left', marginBottom: '2rem' }}>
+                              <p><strong>Patient:</strong> {scanResult.patient?.name}</p>
+                              <p><strong>Doctor:</strong> Dr. {scanResult.doctor?.name}</p>
+                              <p><strong>Date:</strong> {new Date(scanResult.date).toLocaleDateString()}</p>
+                              <p><strong>Slot:</strong> {scanResult.slot}</p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle size={64} color="#ef4444" style={{ margin: '0 auto 1rem' }} />
+                            <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Scan Failed</h2>
+                            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{scanError}</p>
+                          </>
+                        )}
+                        <button className="btn-primary" onClick={() => { setScanResult(null); setScanError(null); if (resumeScanner) resumeScanner(); }}>Scan Next Ticket</button>
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ flex: 1, padding: '2rem', background: '#f8fafc', borderRadius: '15px' }}>
+                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ScanLine /> Scanner Instructions</h3>
+                    <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
+                      <li>Ensure you have granted camera permissions to the browser.</li>
+                      <li>Hold the patient's phone screen with the 3D Ticket directly up to the camera.</li>
+                      <li>Ensure there's no glare blocking the QR code.</li>
+                      <li>A green checkmark will appear instantly once verified.</li>
+                    </ul>
+                  </div>
                 </div>
               </section>
             </motion.div>
