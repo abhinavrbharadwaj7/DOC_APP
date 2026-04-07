@@ -1,12 +1,14 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Users, Calendar as CalendarIcon, FileStack, Settings, Search, Plus, Activity, LogOut, ScanLine, CheckCircle, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { BlurText } from '../../../components/ReactBits/BlurText';
 import { Magnetic } from '../../../components/ReactBits/Magnetic';
-import QRScanner from '../../../components/QRScanner';
 import './admin.css';
+
+const QRScanner = dynamic(() => import('../../../components/QRScanner'), { ssr: false });
 
 export default function AdminDashboard() {
   const router = useRouter();
@@ -16,11 +18,10 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [scanResult, setScanResult] = useState(null);
-  const [scanError, setScanError] = useState(null);
-  const [resumeScanner, setResumeScanner] = useState(null);
+  const [scanError, setScanError]   = useState(null);
+  const [scanKey, setScanKey]       = useState(0);
 
-  const handleScanSuccess = async (decodedText, decodedResult, resumeScan) => {
-    setResumeScanner(() => resumeScan);
+  const handleScanSuccess = useCallback(async (decodedText, decodedResult, resumeScan) => {
     try {
       const res = await fetch('/api/admin/verify-qr', {
         method: 'POST',
@@ -39,11 +40,11 @@ export default function AdminDashboard() {
       setScanResult(null);
       setScanError('Failed to verify ticket.');
     }
-  };
+  }, []);
 
-  const handleScanError = () => {
-    // silently ignore ongoing scan failures
-  };
+  const handleScanError = useCallback(() => {
+    // silently ignore continuous scan failures
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('doccare_user');
@@ -221,17 +222,18 @@ export default function AdminDashboard() {
             <motion.div key="scanner" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <section className="admin-section">
                 <div className="section-header"><h3><BlurText text="Ticket Verification Scanner" delay={0.1} /></h3></div>
-                <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
-                  <div style={{ flex: 1 }}>
-                    {(!scanResult && !scanError) ? (
-                      <QRScanner onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
-                    ) : (
-                      <div style={{ textAlign: 'center', padding: '2rem', background: scanResult ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', borderRadius: '15px', border: `1px solid ${scanResult ? '#10b981' : '#ef4444'}` }}>
+                <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem', flexWrap: 'wrap' }}>
+
+                  {/* Left – Scanner */}
+                  <div style={{ flex: 1, minWidth: 300 }}>
+                    {/* Result overlay card */}
+                    {(scanResult || scanError) && (
+                      <div style={{ textAlign: 'center', padding: '2rem', background: scanResult ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 15, border: `1px solid ${scanResult ? '#10b981' : '#ef4444'}`, marginBottom: '1.5rem' }}>
                         {scanResult ? (
                           <>
-                            <CheckCircle size={64} color="#10b981" style={{ margin: '0 auto 1rem' }} />
-                            <h2 style={{ color: '#10b981', marginBottom: '1rem' }}>Ticket Verified!</h2>
-                            <div style={{ background: 'white', padding: '1.5rem', borderRadius: '10px', textAlign: 'left', marginBottom: '2rem' }}>
+                            <CheckCircle size={56} color="#10b981" style={{ margin: '0 auto 1rem' }} />
+                            <h2 style={{ color: '#10b981', marginBottom: '1rem' }}>✅ Ticket Verified!</h2>
+                            <div style={{ background: 'white', padding: '1.25rem', borderRadius: 10, textAlign: 'left', marginBottom: '1.5rem' }}>
                               <p><strong>Patient:</strong> {scanResult.patient?.name}</p>
                               <p><strong>Doctor:</strong> Dr. {scanResult.doctor?.name}</p>
                               <p><strong>Date:</strong> {new Date(scanResult.date).toLocaleDateString()}</p>
@@ -240,24 +242,40 @@ export default function AdminDashboard() {
                           </>
                         ) : (
                           <>
-                            <AlertCircle size={64} color="#ef4444" style={{ margin: '0 auto 1rem' }} />
-                            <h2 style={{ color: '#ef4444', marginBottom: '1rem' }}>Scan Failed</h2>
-                            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>{scanError}</p>
+                            <AlertCircle size={56} color="#ef4444" style={{ margin: '0 auto 1rem' }} />
+                            <h2 style={{ color: '#ef4444', marginBottom: '0.75rem' }}>Scan Failed</h2>
+                            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>{scanError}</p>
                           </>
                         )}
-                        <button className="btn-primary" onClick={() => { setScanResult(null); setScanError(null); if (resumeScanner) resumeScanner(); }}>Scan Next Ticket</button>
+                        <button className="btn-primary" onClick={() => { setScanResult(null); setScanError(null); setScanKey(k => k + 1); }}>
+                          🔄 Scan Next Ticket
+                        </button>
                       </div>
                     )}
+                    {!scanResult && !scanError && (
+                      <QRScanner key={scanKey} onScanSuccess={handleScanSuccess} onScanError={handleScanError} />
+                    )}
                   </div>
-                  <div style={{ flex: 1, padding: '2rem', background: '#f8fafc', borderRadius: '15px' }}>
-                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ScanLine /> Scanner Instructions</h3>
-                    <ul style={{ listStyle: 'disc', paddingLeft: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
-                      <li>Ensure you have granted camera permissions to the browser.</li>
-                      <li>Hold the patient's phone screen with the 3D Ticket directly up to the camera.</li>
-                      <li>Ensure there's no glare blocking the QR code.</li>
-                      <li>A green checkmark will appear instantly once verified.</li>
+
+                  {/* Right – Instructions */}
+                  <div style={{ flex: 1, minWidth: 240, padding: '2rem', background: '#f8fafc', borderRadius: 15 }}>
+                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ScanLine /> How to Scan</h3>
+                    <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
+                      {[
+                        ['🎥', 'Click "Open Camera" and allow camera access when the browser prompts.'],
+                        ['📱', "Hold the patient's phone/ticket QR code up to the webcam."],
+                        ['🔆', 'Avoid glare — tilt the screen slightly if the scan fails.'],
+                        ['✅', 'Green checkmark appears instantly on a valid ticket.'],
+                        ['⌨️', 'No camera? Use the "Enter token manually" link below the scanner.'],
+                      ].map(([icon, text], i) => (
+                        <li key={i} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', fontSize: '0.88rem' }}>
+                          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{icon}</span>
+                          <span>{text}</span>
+                        </li>
+                      ))}
                     </ul>
                   </div>
+
                 </div>
               </section>
             </motion.div>
