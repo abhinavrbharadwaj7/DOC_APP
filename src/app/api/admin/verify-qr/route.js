@@ -25,12 +25,18 @@ export async function POST(req) {
     appointment.isPresent = true;
     await appointment.save();
 
-    return Response.json({ 
-      message: 'Ticket Verified Successfully!', 
-      patient: appointment.patientId,
-      doctor: appointment.doctorId,
-      slot: appointment.slot,
-      date: appointment.date
+    // Re-fetch populated appointment to return for sync
+    const updated = await Appointment.findById(appointment._id)
+      .populate('patientId', 'name email phone')
+      .populate('doctorId', 'name specialty');
+
+    return Response.json({
+      message: 'Presence verified!',
+      patient: updated.patientId,
+      doctor: updated.doctorId,
+      date: updated.date,
+      slot: updated.slot,
+      isPresent: true
     }, { status: 200 });
 
   } catch (err) {

@@ -20,7 +20,11 @@ function BookAppointmentContent() {
 
   const [user, setUser] = useState(null);
   const [selectedDate, setSelectedDate] = useState('');
+  const [bookedSlots, setBookedSlots] = useState([]);
+  const [lockedSlots, setLockedSlots] = useState([]); // [{slot, patientId}]
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [lockExpires, setLockExpires] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(0);
   const [reason, setReason] = useState('');
   const [status, setStatus] = useState({ loading: false, error: '', success: false });
 
@@ -30,6 +34,80 @@ function BookAppointmentContent() {
     else router.push('/login');
     if (!doctorId) router.push('/doctors');
   }, []);
+
+  useEffect(() => {
+    if (selectedDate && doctorId) {
+      const fetchAvailability = async () => {
+        try {
+          const isoDate = new Date(selectedDate + 'T00:00:00').toISOString();
+          const res = await fetch(`/api/appointments/booked?doctorId=${doctorId}&date=${isoDate}`);
+          if (res.ok) {
+            const data = await res.json();
+            setBookedSlots(data.bookedSlots || []);
+            setLockedSlots(data.lockedSlots || []);
+            
+            // Check if our selected slot is now taken by someone else
+            if (data.bookedSlots?.includes(selectedSlot)) {
+              setSelectedSlot('');
+              setLockExpires(null);
+            }
+            const otherLock = data.lockedSlots?.find(l => l.slot === selectedSlot && l.patientId !== user?.id);
+            if (otherLock) {
+              setSelectedSlot('');
+              setLockExpires(null);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching availability:', err);
+        }
+      };
+      fetchAvailability();
+      const interval = setInterval(fetchAvailability, 15000); // Polling every 15s
+      return () => clearInterval(interval);
+    }
+  }, [selectedDate, doctorId, selectedSlot, user?.id]);
+
+  // Timer Effect
+  useEffect(() => {
+    if (!lockExpires) return;
+    const interval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((new Date(lockExpires) - new Date()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining === 0) {
+        setSelectedSlot('');
+        setLockExpires(null);
+        setStatus({ loading: false, error: 'Your reservation has expired. Please select the slot again.', success: false });
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [lockExpires]);
+
+  const handleSlotClick = async (slot) => {
+    if (status.loading) return;
+    
+    // If clicking the same slot, ignore or release?
+    if (selectedSlot === slot) return;
+
+    setStatus({ loading: true, error: '', success: false });
+    try {
+      const isoDate = new Date(selectedDate + 'T00:00:00').toISOString();
+      const res = await fetch('/api/appointments/lock', {
+        method: 'POST',
+        body: JSON.stringify({ doctorId, date: isoDate, slot, patientId: user.id }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setStatus({ loading: false, error: data.error, success: false });
+      } else {
+        setSelectedSlot(slot);
+        setLockExpires(data.expiresAt);
+        setStatus({ loading: false, error: '', success: false });
+      }
+    } catch (err) {
+      setStatus({ loading: false, error: 'Connection error. Try again.', success: false });
+    }
+  };
 
   const handleBook = async (e) => {
     e.preventDefault();
@@ -104,14 +182,44 @@ function BookAppointmentContent() {
 
           <div className="input-group">
             <label><Clock size={16} /> Select 30-Min Slot</label>
+            {lockExpires && timeLeft > 0 && (
+              <div className="reservation-timer">
+                Slot reserved! Remaining time: <strong>{Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}</strong>
+              </div>
+            )}
             <div className="slots-grid">
-              {TIME_SLOTS.map(slot => (
-                <button key={slot} type="button"
-                  className={`slot-btn ${selectedSlot === slot ? 'selected' : ''}`}
-                  onClick={() => setSelectedSlot(slot)}>
-                  {slot}
-                </button>
-              ))}
+              {TIME_SLOTS.map(slot => {
+                const isBooked = bookedSlots.includes(slot);
+                const activeLock = lockedSlots.find(l => l.slot === slot);
+                const isLockedByOther = activeLock && activeLock.patientId !== user?.id;
+                const isLockedByMe = activeLock && activeLock.patientId === user?.id;
+
+                let stateClass = '';
+                let label = slot;
+                let isDisabled = false;
+
+                if (isBooked) {
+                  stateClass = 'booked';
+                  isDisabled = true;
+                } else if (isLockedByOther) {
+                  stateClass = 'reserved';
+                  isDisabled = true;
+                } else if (selectedSlot === slot || isLockedByMe) {
+                  stateClass = 'selected';
+                }
+
+                return (
+                  <button key={slot} type="button"
+                    className={`slot-btn ${stateClass}`}
+                    onClick={() => handleSlotClick(slot)}
+                    disabled={isDisabled}>
+                    {label}
+                    {isBooked && <span className="slot-badge">Booked</span>}
+                    {isLockedByOther && <span className="slot-badge">Reserved</span>}
+                    {isLockedByMe && !isBooked && <span className="slot-badge">Your Turn</span>}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

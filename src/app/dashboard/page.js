@@ -40,6 +40,13 @@ export default function PatientDashboard() {
     const saved = localStorage.getItem('doccare_user');
     if (!saved) { router.push('/login'); return; }
     const u = JSON.parse(saved);
+
+    // Role Guard
+    if (u.role !== 'patient') {
+      router.push(u.role === 'admin' ? '/admin/dashboard' : '/doctor/dashboard');
+      return;
+    }
+
     setUser(u);
 
     fetch(`/api/appointments?patientId=${u.id}`)

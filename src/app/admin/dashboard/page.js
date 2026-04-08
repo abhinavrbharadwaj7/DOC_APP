@@ -250,6 +250,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     const saved = localStorage.getItem('doccare_user');
     if (!saved) { router.push('/login'); return; }
+    const u = JSON.parse(saved);
+    if (u.role !== 'admin') {
+       router.push(u.role === 'doctor' ? '/doctor/dashboard' : '/dashboard');
+       return;
+    }
     fetchData();
   }, [fetchData, router]);
 

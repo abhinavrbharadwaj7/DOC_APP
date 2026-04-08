@@ -23,16 +23,27 @@ export default function DoctorDashboard() {
   const [saving, setSaving]             = useState(false);
   const [saved, setSaved]               = useState(false);
 
-  useEffect(() => {
-    const saved = localStorage.getItem('doccare_user');
-    if (!saved) { router.push('/login'); return; }
-    const u = JSON.parse(saved);
-    setUser(u);
+  const fetchData = useCallback((u) => {
     fetch(`/api/appointments?doctorId=${u.id}`)
       .then(r => r.json())
       .then(data => { setAppointments(data.appointments || []); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('doccare_user');
+    if (!saved) { router.push('/login'); return; }
+    const u = JSON.parse(saved);
+
+    // Role Guard
+    if (u.role !== 'doctor') {
+      router.push(u.role === 'admin' ? '/admin/dashboard' : '/dashboard');
+      return;
+    }
+
+    setUser(u);
+    fetchData(u);
+  }, [router, fetchData]);
 
   const openDrawer = (apt) => {
     setSelected(apt);
@@ -77,7 +88,12 @@ export default function DoctorDashboard() {
   const handleLogout = () => { localStorage.removeItem('doccare_user'); router.push('/login'); };
 
   const today    = appointments.filter(a => new Date(a.date).toDateString() === new Date().toDateString());
-  const upcoming = appointments.filter(a => new Date(a.date) > new Date());
+  const upcoming = appointments.filter(a => {
+    const d = new Date(a.date);
+    const now = new Date();
+    // Truly upcoming: future dates only
+    return d > now && d.toDateString() !== now.toDateString();
+  });
   const completed = appointments.filter(a => a.status === 'completed');
   const checkedIn = appointments.filter(a => a.isPresent);
 

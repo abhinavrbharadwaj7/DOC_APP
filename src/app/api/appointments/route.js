@@ -1,5 +1,6 @@
 import connectToDatabase from '../../../lib/db';
 import Appointment from '../../../models/Appointment';
+import SlotLock from '../../../models/SlotLock';
 import crypto from 'crypto';
 
 export async function POST(req) {
@@ -31,6 +32,13 @@ export async function POST(req) {
       isPresent: false
     });
 
+    // Clear any slot lock for this user/slot
+    try {
+      await SlotLock.deleteOne({ doctorId, date: new Date(date), slot, patientId });
+    } catch (e) {
+      console.warn('[SILENT LOCK CLEAR ERROR]', e);
+    }
+
     return Response.json({ message: 'Appointment booked!', appointment }, { status: 201 });
   } catch (err) {
     console.error('[BOOK ERROR]', err);
@@ -44,6 +52,11 @@ export async function GET(req) {
     const patientId = searchParams.get('patientId');
     const doctorId = searchParams.get('doctorId');
 
+    // Security Guard: Prevent global fetch
+    if (!patientId && !doctorId) {
+      return Response.json({ error: 'Unauthorized: Filter required.' }, { status: 403 });
+    }
+
     await connectToDatabase();
 
     const query = {};
@@ -53,7 +66,7 @@ export async function GET(req) {
     const appointments = await Appointment.find(query)
       .populate('patientId', 'name email phone')
       .populate('doctorId', 'name specialty')
-      .sort({ date: 1 });
+      .sort({ date: 1, slot: 1 });
 
     return Response.json({ appointments }, { status: 200 });
   } catch (err) {

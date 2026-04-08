@@ -27,9 +27,11 @@ export default function QRScanner({ onScanSuccess, onScanError }) {
         { facingMode: 'environment' },
         { fps: 10, qrbox: { width: 240, height: 240 } },
         (decodedText) => {
-          html5QrCode.stop().catch(() => {});
+          // Check state before stopping to avoid "Cannot stop" error
+          if (html5QrCode.getState() === 2) { // 2 = SCANNING
+             html5QrCode.stop().catch(() => {});
+          }
           onScanSuccess(decodedText, null, () => {
-            // Resume if needed
             setStatus('idle');
           });
         },
@@ -47,9 +49,16 @@ export default function QRScanner({ onScanSuccess, onScanError }) {
     }
   };
 
-  const stopScanner = () => {
+  const stopScanner = async () => {
     if (instanceRef.current) {
-      instanceRef.current.stop().catch(() => {});
+      const state = instanceRef.current.getState();
+      if (state === 2) { // SCANNING
+        try {
+          await instanceRef.current.stop();
+        } catch (err) {
+          console.warn('[QR] Stop warning:', err);
+        }
+      }
       instanceRef.current = null;
     }
     setStatus('idle');
@@ -58,8 +67,12 @@ export default function QRScanner({ onScanSuccess, onScanError }) {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Robust cleanup
       if (instanceRef.current) {
-        instanceRef.current.stop().catch(() => {});
+        const scanner = instanceRef.current;
+        if (scanner.getState() === 2) {
+          scanner.stop().catch(() => {});
+        }
       }
     };
   }, []);
