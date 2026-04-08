@@ -135,21 +135,33 @@ export default function PatientDashboard() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
             <div className="dash-section">
               <h3>My Medical Records</h3>
-              {appointments.filter(a => a.notes || a.prescriptionUrl).length === 0 ? (
+              {appointments.filter(a => a.notes || a.prescriptionUrl || a.reportUrl).length === 0 ? (
                 <div className="empty-state">
                   <FileText size={48} color="var(--primary-light)" />
                   <p>No records yet. Records are added by your doctor after consultation.</p>
                 </div>
               ) : (
                 <table className="admin-table">
-                  <thead><tr><th>Date</th><th>Doctor</th><th>Notes</th><th>Prescription</th></tr></thead>
+                  <thead><tr><th>Date</th><th>Doctor</th><th>Reason</th><th>Notes</th><th>Prescription</th><th>Report</th></tr></thead>
                   <tbody>
-                    {appointments.filter(a => a.notes || a.prescriptionUrl).map(apt => (
+                    {appointments.filter(a => a.notes || a.prescriptionUrl || a.reportUrl).map(apt => (
                       <tr key={apt._id}>
                         <td>{new Date(apt.date).toLocaleDateString()}</td>
                         <td>{apt.doctorId?.name}</td>
-                        <td>{apt.notes || '-'}</td>
-                        <td>{apt.prescriptionUrl ? <a href={apt.prescriptionUrl} className="link-primary">View</a> : '-'}</td>
+                        <td>{apt.reason || '-'}</td>
+                        <td style={{ maxWidth: 200, whiteSpace: 'pre-wrap', fontSize: '0.85rem' }}>{apt.notes || '-'}</td>
+                        <td style={{ maxWidth: 180, fontSize: '0.85rem' }}>
+                          {apt.prescriptionUrl
+                            ? apt.prescriptionUrl.startsWith('http')
+                              ? <a href={apt.prescriptionUrl} target="_blank" rel="noopener noreferrer" className="link-primary">View</a>
+                              : <span style={{ whiteSpace: 'pre-wrap' }}>{apt.prescriptionUrl}</span>
+                            : '-'}
+                        </td>
+                        <td>
+                          {apt.reportUrl
+                            ? <a href={apt.reportUrl} target="_blank" rel="noopener noreferrer" className="link-primary">View Report</a>
+                            : '-'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

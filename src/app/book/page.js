@@ -28,6 +28,7 @@ function BookAppointmentContent() {
     const saved = localStorage.getItem('doccare_user');
     if (saved) setUser(JSON.parse(saved));
     else router.push('/login');
+    if (!doctorId) router.push('/doctors');
   }, []);
 
   const handleBook = async (e) => {
@@ -38,13 +39,16 @@ function BookAppointmentContent() {
     }
     setStatus({ loading: true, error: '', success: false });
 
+    // Send date as UTC midnight to avoid timezone shift in conflict detection
+    const isoDate = new Date(selectedDate + 'T00:00:00').toISOString();
+
     const res = await fetch('/api/appointments', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         patientId: user?.id,
         doctorId,
-        date: selectedDate,
+        date: isoDate,
         slot: selectedSlot,
         reason,
       }),

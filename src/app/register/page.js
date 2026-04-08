@@ -99,8 +99,7 @@ export default function Register() {
               <select value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}
                 style={{ flex: 1, border: 'none', background: 'transparent', outline: 'none', fontSize: '1rem', padding: '0.5rem' }}>
                 <option value="patient">Patient</option>
-                <option value="doctor">Doctor</option>
-                <option value="admin">Admin</option>
+                <option value="doctor">Doctor (requires clinic approval)</option>
               </select>
             </div>
           </div>

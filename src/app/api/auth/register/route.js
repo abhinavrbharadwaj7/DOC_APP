@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 
 export async function POST(req) {
   try {
-    const { name, email, password, phone, role } = await req.json();
+    const { name, email, password, phone, role, specialty } = await req.json();
 
     if (!name || !email || !password) {
       return Response.json({ error: 'Name, email, and password are required.' }, { status: 400 });
@@ -19,13 +19,25 @@ export async function POST(req) {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const user = await User.create({
+    // Guard: public registration cannot create admin accounts
+    // Admin accounts can only be created by passing the internal bypass header
+    const isAdminBypass = req.headers.get('x-admin-bypass') === process.env.ADMIN_BYPASS_SECRET;
+    const safeRole = (role === 'admin' && !isAdminBypass) ? 'patient' : (role || 'patient');
+
+    const userData = {
       name,
       email,
       password: hashedPassword,
       phone: phone || '',
-      role: role || 'patient',
-    });
+      role: safeRole,
+    };
+
+    // Save specialty for doctor accounts
+    if (safeRole === 'doctor' && specialty) {
+      userData.specialty = specialty;
+    }
+
+    const user = await User.create(userData);
 
     return Response.json(
       { message: 'Account created successfully!', userId: user._id },
