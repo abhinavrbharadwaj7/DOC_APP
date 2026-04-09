@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, FileText, LogOut, Clock, User, QrCode, X, Settings, Camera, Save, CheckCircle } from 'lucide-react';
+import { CalendarDays, FileText, LogOut, Clock, User, QrCode, X, Settings, Camera, Save, CheckCircle, Activity, Printer } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import QRCode from 'react-qr-code';
@@ -16,6 +16,7 @@ export default function PatientDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appointments');
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [selectedReport, setSelectedReport] = useState(null);
 
   // Profile Settings State
   const [profileForm, setProfileForm] = useState({ name: '', phone: '', medicalHistory: '', profilePic: '' });
@@ -206,7 +207,7 @@ export default function PatientDashboard() {
                         <td>{apt.reason}</td>
                         <td><span className={`status-badge ${statusClass(apt.status)}`}>{apt.status}</span></td>
                         <td>
-                          {apt.entryToken && (
+                          {apt.entryToken && !apt.isPresent ? (
                             <button 
                               className="btn-primary" 
                               style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}
@@ -214,7 +215,9 @@ export default function PatientDashboard() {
                             >
                               <QrCode size={14} style={{ marginRight: 4 }} /> View
                             </button>
-                          )}
+                          ) : apt.isPresent ? (
+                            <span style={{ color: '#10b981', fontWeight: 600, fontSize: '0.85rem' }}>Checked In</span>
+                          ) : '-'}
                         </td>
                       </tr>
                     ))}
@@ -252,9 +255,18 @@ export default function PatientDashboard() {
                             : '-'}
                         </td>
                         <td>
-                          {apt.reportUrl
-                            ? <a href={apt.reportUrl} target="_blank" rel="noopener noreferrer" className="link-primary">View Report</a>
-                            : '-'}
+                          <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            {apt.reportUrl && (
+                              <a href={apt.reportUrl} target="_blank" rel="noopener noreferrer" className="link-primary">File</a>
+                            )}
+                            <button 
+                              className="btn-primary" 
+                              style={{ padding: '0.2rem 0.5rem', fontSize: '0.75rem', background: 'var(--success)' }}
+                              onClick={() => setSelectedReport(apt)}
+                            >
+                              Certificate
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -391,6 +403,97 @@ export default function PatientDashboard() {
                   </div>
                 </div>
               </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedReport && (
+          <motion.div 
+            className="report-modal-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSelectedReport(null)}
+          >
+            <div className="report-modal-content" onClick={(e) => e.stopPropagation()}>
+              <button className="report-close-btn" onClick={() => setSelectedReport(null)}>
+                <X size={20} />
+              </button>
+
+              <div className="report-paper">
+                <div className="report-header">
+                  <div className="clinic-brand">
+                    <Activity size={36} color="#2563eb" />
+                    <div>
+                      <h1>DocCare Clinic</h1>
+                      <p>123 Medical Innovation Drive, Care City, NY 10001</p>
+                      <p>Phone: +1 800-DOC-CARE | Web: portal.doccare.com</p>
+                    </div>
+                  </div>
+                  <div className="report-meta">
+                    <h2>CLINICAL REPORT</h2>
+                    <p><strong>Report ID:</strong> #{selectedReport._id.slice(-6).toUpperCase()}</p>
+                    <p><strong>Date:</strong> {new Date(selectedReport.date).toLocaleDateString()} {selectedReport.slot}</p>
+                  </div>
+                </div>
+
+                <hr className="report-divider" />
+
+                <div className="patient-demographics report-section">
+                  <div className="patient-col">
+                    <p className="label">Patient Name</p>
+                    <p className="value">{user?.name}</p>
+                  </div>
+                  <div className="patient-col" style={{ flex: 1 }}>
+                    <p className="label">Contact Info</p>
+                    <p className="value">{user?.phone || user?.email}</p>
+                  </div>
+                  <div className="patient-col" style={{ textAlign: 'right' }}>
+                    <p className="label">Attending Doctor</p>
+                    <p className="value">Dr. {selectedReport.doctorId?.name} <br/><span className="spec">({selectedReport.doctorId?.specialty || 'General'})</span></p>
+                  </div>
+                </div>
+
+                <div className="report-section">
+                  <h3>Presenting Complaint</h3>
+                  <p className="pre-wrap">{selectedReport.reason}</p>
+                </div>
+
+                {selectedReport.notes && (
+                  <div className="report-section bg-light">
+                    <h3>Clinical Findings & Notes</h3>
+                    <p className="pre-wrap">{selectedReport.notes}</p>
+                  </div>
+                )}
+
+                {selectedReport.prescriptionUrl && (
+                  <div className="report-section">
+                    <h3>Rx Prescription</h3>
+                    <div className="signature-font">
+                      {selectedReport.prescriptionUrl.startsWith('http') ? (
+                        <a href={selectedReport.prescriptionUrl} target="_blank" rel="noopener noreferrer" className="link-primary">
+                          View Attached Prescription File
+                        </a>
+                      ) : (
+                        <p className="pre-wrap">{selectedReport.prescriptionUrl}</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="doctor-signature">
+                  <div className="sig-line"></div>
+                  <p>Dr. {selectedReport.doctorId?.name}</p>
+                  <p className="light-text">Authorized Signature</p>
+                </div>
+              </div>
+
+              <div className="report-actions">
+                <button className="btn-primary" onClick={() => window.print()}>
+                  <Printer size={16} style={{ marginRight: 8 }} /> Print / Save as PDF
+                </button>
+              </div>
             </div>
           </motion.div>
         )}
