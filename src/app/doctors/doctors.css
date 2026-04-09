@@ -168,6 +168,20 @@
 }
 
 @media (max-width: 768px) {
+  .doctors-page-container {
+    padding-top: 6rem;
+  }
+  .doctors-title {
+    font-size: 2.5rem;
+  }
+  .doctors-subtitle {
+    font-size: 1rem;
+    padding: 0 1rem;
+  }
+  .grid-cols-2 {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
   .doctor-card {
     flex-direction: column;
     text-align: center;

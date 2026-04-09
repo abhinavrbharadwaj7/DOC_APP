@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['patient', 'doctor', 'admin'], default: 'patient' },
   // Doctor specific fields
   specialty: { type: String },
+  profilePic: { type: String },
   // Patient specific fields
   medicalHistory: { type: String }
 }, { timestamps: true });

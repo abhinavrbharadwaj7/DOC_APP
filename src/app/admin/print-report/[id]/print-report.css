@@ -1,0 +1,230 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+  background: #f1f5f9;
+  margin: 0;
+  padding: 0;
+}
+
+.print-container {
+  font-family: 'Inter', sans-serif;
+  color: #0f172a;
+  max-width: 850px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.print-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.btn-secondary, .btn-primary {
+  padding: 0.6rem 1.25rem;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+.btn-secondary { background: #e2e8f0; color: #475569; }
+.btn-secondary:hover { background: #cbd5e1; }
+.btn-primary { background: #2563eb; color: white; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+.btn-primary:hover { background: #1d4ed8; }
+
+.report-paper {
+  background: white;
+  padding: 4rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05);
+  min-height: 1000px;
+  position: relative;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.clinic-brand {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.clinic-brand h1 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.6rem;
+  color: #1e293b;
+  font-weight: 800;
+}
+
+.clinic-brand p {
+  margin: 0 0 0.15rem 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.report-meta {
+  text-align: right;
+}
+
+.report-meta h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #cbd5e1;
+  letter-spacing: 1.5px;
+  font-weight: 800;
+}
+
+.report-meta p {
+  margin: 0 0 0.2rem 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+
+.divider {
+  border: 0;
+  border-top: 2px solid #e2e8f0;
+  margin: 2rem 0;
+}
+
+.section {
+  margin-bottom: 2.5rem;
+}
+
+.section.bg-light {
+  background: #f8fafc;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #3b82f6;
+}
+
+.section h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+}
+
+.patient-demographics {
+  display: flex;
+  gap: 2rem;
+}
+
+.patient-col .label {
+  margin: 0 0 0.3rem 0;
+  font-size: 0.8rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.patient-col .value {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: #0f172a;
+  line-height: 1.4;
+}
+.spec {
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: #64748b;
+}
+
+.pre-wrap {
+  white-space: pre-wrap;
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.7;
+  color: #1e293b;
+}
+
+.signature-font {
+  font-family: inherit;
+  font-size: 1.1rem;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border-left: 4px solid #10b981;
+}
+
+.doctor-signature {
+  position: absolute;
+  bottom: 4rem;
+  right: 4rem;
+  text-align: right;
+}
+
+.sig-line {
+  width: 240px;
+  border-top: 1px solid #1e293b;
+  margin-bottom: 0.5rem;
+}
+
+.doctor-signature p {
+  margin: 0 0 0.2rem 0;
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 1.05rem;
+}
+
+.doctor-signature .light-text {
+  font-weight: 500;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+@media print {
+  body {
+    background: white;
+  }
+  .print-container {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .report-paper {
+    box-shadow: none;
+    padding: 0;
+    min-height: auto;
+  }
+  .section.bg-light {
+    background: transparent;
+    padding: 0;
+    border-left: 0;
+    border-top: 2px solid #e2e8f0;
+    padding-top: 1rem;
+    border-radius: 0;
+  }
+  .signature-font {
+    background: transparent;
+    padding: 0;
+    border-left: 0;
+  }
+  .doctor-signature {
+    position: static;
+    margin-top: 6rem;
+    float: right;
+    width: 240px;
+  }
+  /* Force background colors and styles on print if supported */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
-import { Users, Calendar as CalendarIcon, FileStack, Settings, Search, Plus, Activity, LogOut, ScanLine, CheckCircle, AlertCircle, X } from 'lucide-react';
+import { Users, Calendar as CalendarIcon, FileStack, Settings, Search, Plus, Activity, LogOut, ScanLine, CheckCircle, AlertCircle, X, BellRing } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -210,6 +210,7 @@ export default function AdminDashboard() {
   const [scanKey, setScanKey]       = useState(0);
   const [showModal, setShowModal]   = useState(false);
   const [toast, setToast]           = useState('');
+  const [notifications, setNotifications] = useState([]);
 
   const handleScanSuccess = useCallback(async (decodedText, decodedResult, resumeScan) => {
     try {
@@ -258,6 +259,37 @@ export default function AdminDashboard() {
     fetchData();
   }, [fetchData, router]);
 
+  // Notifications polling
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch('/api/notifications');
+        const data = await res.json();
+        if (data.notifications) {
+          setNotifications(data.notifications);
+        }
+      } catch (err) {
+        console.error('Error fetching notifications:', err);
+      }
+    };
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5000); // Poll every 5 seconds
+    return () => clearInterval(interval);
+  }, []);
+
+  const markNotificationRead = async (id) => {
+    try {
+      await fetch('/api/notifications/read', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notificationId: id })
+      });
+      setNotifications(prev => prev.filter(n => n._id !== id));
+    } catch {
+      // ignore
+    }
+  };
+
   const handleLogout = () => { localStorage.removeItem('doccare_user'); router.push('/login'); };
   const statusClass = (s) => s === 'completed' ? 'success' : s === 'cancelled' ? 'danger' : 'pending';
   const roleColor = (r) => r === 'doctor' ? { background: '#EFF6FF', color: 'var(--primary)' } : r === 'admin' ? { background: '#FEE2E2', color: '#DC2626' } : { background: '#FEF3C7', color: '#D97706' };
@@ -276,6 +308,41 @@ export default function AdminDashboard() {
     setShowModal(false);
     setToast(msg);
     fetchData(); // refresh data
+  };
+
+  const handleAdminFileUpload = async (aptId, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setToast('Uploading...');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        const updateRes = await fetch(`/api/appointments/${aptId}`, {
+           method: 'PATCH',
+           headers: { 'Content-Type': 'application/json' },
+           body: JSON.stringify({ reportUrl: data.url })
+        });
+        if (updateRes.ok) {
+           setToast('Report uploaded & saved!');
+           fetchData();
+        } else {
+           setToast('Failed to save report to appointment.');
+        }
+      } else {
+        setToast('Upload failed: ' + data.error);
+      }
+    } catch (err) {
+      setToast('Upload error.');
+    }
   };
 
   return (
@@ -476,6 +543,19 @@ export default function AdminDashboard() {
                                 ✅ Mark Complete
                               </button>
                             )}
+                            <label className="vault-complete-btn" style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', cursor: 'pointer', textAlign: 'center', display: 'block' }}>
+                              📎 Upload Report
+                              <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} onChange={(e) => handleAdminFileUpload(apt._id, e)} />
+                            </label>
+                            {apt.status === 'completed' && (
+                              <button 
+                                className="vault-complete-btn" 
+                                style={{ background: '#2563eb', color: 'white', marginTop: '0.25rem' }} 
+                                onClick={() => window.open(`/admin/print-report/${apt._id}`, '_blank')}
+                              >
+                                🖨️ PDF / Print
+                              </button>
+                            )}
                           </div>
                         </div>
                     ))}
@@ -587,6 +667,25 @@ export default function AdminDashboard() {
       <AnimatePresence>
         {toast && <Toast message={toast} onDone={() => setToast('')} />}
       </AnimatePresence>
+
+      {/* Notifications Toast Container */}
+      <div className="notification-toast-container">
+        <AnimatePresence>
+          {notifications.map(n => (
+            <motion.div key={n._id} className="notification-toast"
+              initial={{ opacity: 0, x: 50 }} 
+              animate={{ opacity: 1, x: 0 }} 
+              exit={{ opacity: 0, scale: 0.9 }}>
+              <div className="notif-icon"><BellRing size={20} color="white" /></div>
+              <div className="notif-content">
+                <strong>{n.doctorName}</strong>
+                <p>{n.message}</p>
+              </div>
+              <button className="notif-close" onClick={() => markNotificationRead(n._id)}><X size={16}/></button>
+            </motion.div>
+          ))}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

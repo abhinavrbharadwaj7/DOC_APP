@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { CalendarDays, FileText, LogOut, Clock, User, QrCode, X } from 'lucide-react';
+import { CalendarDays, FileText, LogOut, Clock, User, QrCode, X, Settings, Camera, Save, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import Link from 'next/link';
 import QRCode from 'react-qr-code';
@@ -16,6 +16,12 @@ export default function PatientDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('appointments');
   const [selectedTicket, setSelectedTicket] = useState(null);
+
+  // Profile Settings State
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', medicalHistory: '', profilePic: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   // 3D Tilt Effect variables
   const mouseX = useMotionValue(0);
@@ -36,6 +42,13 @@ export default function PatientDashboard() {
     mouseY.set(0);
   };
 
+  const fetchData = (u) => {
+    fetch(`/api/appointments?patientId=${u.id}`)
+      .then(r => r.json())
+      .then(data => { setAppointments(data.appointments || []); setLoading(false); })
+      .catch(() => setLoading(false));
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem('doccare_user');
     if (!saved) { router.push('/login'); return; }
@@ -48,12 +61,15 @@ export default function PatientDashboard() {
     }
 
     setUser(u);
+    setProfileForm({
+      name: u.name || '',
+      phone: u.phone || '',
+      medicalHistory: u.medicalHistory || '',
+      profilePic: u.profilePic || ''
+    });
 
-    fetch(`/api/appointments?patientId=${u.id}`)
-      .then(r => r.json())
-      .then(data => { setAppointments(data.appointments || []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+    fetchData(u);
+  }, [router]);
 
   const handleLogout = () => {
     localStorage.removeItem('doccare_user');
@@ -61,6 +77,65 @@ export default function PatientDashboard() {
   };
 
   const statusClass = (s) => s === 'completed' ? 'success' : s === 'cancelled' ? 'danger' : 'pending';
+
+  const handleProfileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        setProfileForm(f => ({ ...f, profilePic: data.url }));
+      } else {
+        alert('Upload failed: ' + data.error);
+      }
+    } catch (err) {
+      alert('Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
+    try {
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileForm),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        const updatedUser = data.user;
+        setUser(updatedUser);
+        // Update local storage
+        localStorage.setItem('doccare_user', JSON.stringify(updatedUser));
+        
+        // Refresh appointments
+        fetchData(updatedUser);
+        
+        setProfileSaved(true);
+        setTimeout(() => setProfileSaved(false), 3000);
+      } else {
+        alert('Failed to update profile.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('An error occurred while saving profile.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   return (
     <div className="dashboard-container">
@@ -70,7 +145,13 @@ export default function PatientDashboard() {
           <span className="badge">Patient</span>
         </div>
         <div className="dash-user">
-          <div className="dash-avatar"><User size={28} /></div>
+          <div className="dash-avatar" onClick={() => setActiveTab('settings')} style={{ cursor: 'pointer' }}>
+            {user?.profilePic ? (
+              <img src={user.profilePic} alt="Profile" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+            ) : (
+              <User size={28} />
+            )}
+          </div>
           <div>
             <strong>{user?.name}</strong>
             <p>{user?.email}</p>
@@ -83,6 +164,9 @@ export default function PatientDashboard() {
           <button className={`nav-item ${activeTab === 'records' ? 'active' : ''}`} onClick={() => setActiveTab('records')}>
             <FileText size={20} /> My Records
           </button>
+          <button className={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+            <Settings size={20} /> Profile Settings
+          </button>
         </nav>
         <button className="nav-item logout-btn" onClick={handleLogout}>
           <LogOut size={20} /> Log Out
@@ -91,7 +175,10 @@ export default function PatientDashboard() {
 
       <main className="dashboard-main">
         <div className="dash-header">
-          <h2>Welcome back, <span style={{ color: 'var(--primary)' }}>{user?.name?.split(' ')[0]}</span></h2>
+          <h2>
+            {activeTab === 'settings' ? 'Profile Settings' : `Welcome back, `}
+            {activeTab !== 'settings' && <span style={{ color: 'var(--primary)' }}>{user?.name?.split(' ')[0]}</span>}
+          </h2>
           <Link href="/doctors" className="btn-primary">+ Book New Appointment</Link>
         </div>
 
@@ -174,6 +261,70 @@ export default function PatientDashboard() {
                   </tbody>
                 </table>
               )}
+            </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'settings' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <div className="settings-container">
+              <div className="settings-card">
+                <div className="settings-header">
+                  <h3><User size={20} /> Personal Information</h3>
+                  <p>Update your photo and personal details.</p>
+                </div>
+                
+                <div className="settings-body">
+                  <div className="profile-pic-section">
+                    <div className="pic-preview">
+                      {profileForm.profilePic ? (
+                         <img src={profileForm.profilePic} alt="Profile" className="preview-img" />
+                      ) : (
+                         <div className="preview-placeholder">
+                           {profileForm.name ? profileForm.name.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() : 'U'}
+                         </div>
+                      )}
+                      
+                      <div className="upload-btn-wrapper">
+                        <button className="upload-btn"><Camera size={16}/> {uploading ? 'Uploading...' : 'Change Photo'}</button>
+                        <input type="file" accept="image/*" onChange={handleProfileUpload} disabled={uploading} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="form-grid">
+                     <div className="form-group">
+                       <label>Full Name</label>
+                       <input type="text" value={profileForm.name} onChange={e => setProfileForm({...profileForm, name: e.target.value})} className="report-input" />
+                     </div>
+                     <div className="form-group">
+                       <label>Phone Number</label>
+                       <input type="text" value={profileForm.phone} onChange={e => setProfileForm({...profileForm, phone: e.target.value})} className="report-input" placeholder="e.g. +1 234 567 8900" />
+                     </div>
+                     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                       <label>Past Medical History / Allergies</label>
+                       <textarea 
+                         value={profileForm.medicalHistory} 
+                         onChange={e => setProfileForm({...profileForm, medicalHistory: e.target.value})} 
+                         className="report-input" 
+                         placeholder="e.g. Penicillin allergy, Asthmatic"
+                         rows={4}
+                         style={{ resize: 'vertical' }}
+                       />
+                     </div>
+                  </div>
+                </div>
+
+                <div className="settings-footer">
+                   {profileSaved ? (
+                     <div className="save-success"><CheckCircle size={18}/> Profile Saved!</div>
+                   ) : (
+                     <button className="drawer-save-btn" onClick={handleSaveProfile} disabled={savingProfile || uploading}>
+                       {savingProfile ? 'Saving...' : <><Save size={16}/> Save Changes</>}
+                     </button>
+                   )}
+                </div>
+              </div>
             </div>
           </motion.div>
         )}

@@ -28,10 +28,17 @@ export default function QRScanner({ onScanSuccess, onScanError }) {
         { fps: 10, qrbox: { width: 240, height: 240 } },
         (decodedText) => {
           // Check state before stopping to avoid "Cannot stop" error
-          if (html5QrCode.getState() === 2) { // 2 = SCANNING
-             html5QrCode.stop().catch(() => {});
+          try {
+            if (html5QrCode.getState() === 2) { // 2 = SCANNING
+               const stopRes = html5QrCode.stop();
+               if (stopRes && stopRes.catch) stopRes.catch(() => {});
+            }
+          } catch(e) {
+            console.warn('[QR] Synchronous stop error blocked:', e);
           }
+          
           onScanSuccess(decodedText, null, () => {
+             // Since scanner is stopped, reset status
             setStatus('idle');
           });
         },
@@ -51,13 +58,13 @@ export default function QRScanner({ onScanSuccess, onScanError }) {
 
   const stopScanner = async () => {
     if (instanceRef.current) {
-      const state = instanceRef.current.getState();
-      if (state === 2) { // SCANNING
-        try {
+      try {
+        const state = instanceRef.current.getState();
+        if (state === 2) { // SCANNING
           await instanceRef.current.stop();
-        } catch (err) {
-          console.warn('[QR] Stop warning:', err);
         }
+      } catch (err) {
+        console.warn('[QR] Stop warning:', err);
       }
       instanceRef.current = null;
     }
@@ -70,9 +77,12 @@ export default function QRScanner({ onScanSuccess, onScanError }) {
       // Robust cleanup
       if (instanceRef.current) {
         const scanner = instanceRef.current;
-        if (scanner.getState() === 2) {
-          scanner.stop().catch(() => {});
-        }
+        try {
+          if (scanner.getState() === 2) {
+            const stopRes = scanner.stop();
+            if (stopRes && stopRes.catch) stopRes.catch(() => {});
+          }
+        } catch (err) {}
       }
     };
   }, []);

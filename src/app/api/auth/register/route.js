@@ -40,7 +40,18 @@ export async function POST(req) {
     const user = await User.create(userData);
 
     return Response.json(
-      { message: 'Account created successfully!', userId: user._id },
+      { 
+        message: 'Account created successfully!', 
+        user: {
+          id: user._id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          phone: user.phone,
+          specialty: user.specialty,
+          medicalHistory: user.medicalHistory
+        }
+      },
       { status: 201 }
     );
   } catch (err) {

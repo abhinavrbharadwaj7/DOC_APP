@@ -201,3 +201,36 @@ h1.hero-title > div {
   .top-right { right: 0; }
   .bottom-left { left: 0; }
 }
+
+@media (max-width: 768px) {
+  h1.hero-title {
+    font-size: 2.5rem;
+  }
+  .hero-subtitle {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stats-bar {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  .hero-actions {
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+  }
+  .hero-actions a {
+    width: 100%;
+    text-align: center;
+    justify-content: center;
+  }
+  .floating-card {
+    padding: 0.75rem 1rem;
+  }
+  .floating-card strong {
+    font-size: 0.95rem;
+  }
+  .floating-card span {
+    font-size: 0.75rem;
+  }
+}

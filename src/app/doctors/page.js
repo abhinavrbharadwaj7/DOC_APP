@@ -82,9 +82,13 @@ export default function DoctorsList() {
             {filtered.map((doc) => (
               <motion.div key={doc._id} className="doctor-card editorial-card" variants={cardVariants}>
                 <div className="doc-avatar">
-                  <div className="doc-avatar-placeholder">
-                    <Stethoscope size={40} color="var(--primary)" />
-                  </div>
+                  {doc.profilePic ? (
+                    <img src={doc.profilePic} alt={doc.name} style={{width: '100px', height: '100px', objectFit: 'cover', borderRadius: '50%'}} />
+                  ) : (
+                    <div className="doc-avatar-placeholder">
+                      <Stethoscope size={40} color="var(--primary)" />
+                    </div>
+                  )}
                 </div>
                 <div className="doc-info">
                   <h3>{doc.name}</h3>

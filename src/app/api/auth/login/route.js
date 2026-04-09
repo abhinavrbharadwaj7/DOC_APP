@@ -31,6 +31,9 @@ export async function POST(req) {
         email: user.email,
         role: user.role,
         phone: user.phone,
+        profilePic: user.profilePic,
+        specialty: user.specialty,
+        medicalHistory: user.medicalHistory
       }
     }, { status: 200 });
 

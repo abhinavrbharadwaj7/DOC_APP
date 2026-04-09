@@ -133,3 +133,15 @@
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.15);
 }
+
+@media (max-width: 768px) {
+  .auth-container {
+    padding-top: 5rem;
+  }
+  .auth-card {
+    padding: 2rem 1.5rem;
+  }
+  .auth-header h2 {
+    font-size: 1.6rem;
+  }
+}

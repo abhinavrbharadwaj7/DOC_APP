@@ -1,6 +1,8 @@
 import connectToDatabase from '../../../lib/db';
 import User from '../../../models/User';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     await connectToDatabase();

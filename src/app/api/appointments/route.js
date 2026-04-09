@@ -3,6 +3,8 @@ import Appointment from '../../../models/Appointment';
 import SlotLock from '../../../models/SlotLock';
 import crypto from 'crypto';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req) {
   try {
     const { patientId, doctorId, date, slot, reason } = await req.json();
